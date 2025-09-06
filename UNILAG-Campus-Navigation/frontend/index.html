@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNILAG Campus Navigation System</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="./style.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1><i class="fas fa-map-marked-alt"></i> UNILAG Campus Navigation</h1>
+            <p>Find the best routes across University of Lagos campus</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="grid-layout">
+                <!-- Controls Panel - 3 columns -->
+                <div class="controls-panel">
+                    <div class="control-section">
+                        <h3><i class="fas fa-route"></i> Plan Your Route</h3>
+                        
+                        <div class="input-group">
+                            <label for="startLocation">
+                                <i class="fas fa-play-circle"></i> Starting Point
+                            </label>
+                            <select id="startLocation" class="location-select">
+                                <option value="">Select starting location...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="endLocation">
+                                <i class="fas fa-flag-checkered"></i> Destination
+                            </label>
+                            <select id="endLocation" class="location-select">
+                                <option value="">Select destination...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button id="findRoute" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Find Route
+                            </button>
+                            <button id="alternativeRoutes" class="btn btn-secondary">
+                                <i class="fas fa-list"></i> Find Alternatives
+                            </button>
+                            <button id="emergencyRoute" class="btn btn-emergency">
+                                <i class="fas fa-exclamation-triangle"></i> Emergency
+                            </button>
+                            <button id="clearRoute" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Updates Section -->
+                    <div class="control-section">
+                        <h3><i class="fas fa-construction"></i> Traffic & Construction</h3>
+                        
+                        <div class="traffic-controls">
+                            <button id="simulate-traffic-btn" class="btn btn-warning">
+                                <i class="fas fa-car"></i> Simulate Heavy Traffic
+                            </button>
+                            <button id="simulate-construction-btn" class="btn btn-warning">
+                                <i class="fas fa-hard-hat"></i> Simulate Construction
+                            </button>
+                            <button id="reset-graph-btn" class="btn btn-info">
+                                <i class="fas fa-refresh"></i> Reset Conditions
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Route Information -->
+                    <div class="route-info" id="routeInfo" style="display: block;">
+                        <h3><i class="fas fa-info-circle"></i> Route Information</h3>
+                        <div id="route-details"></div>
+                    </div>
+                </div>
+
+                <!-- Map Container - 9 columns -->
+                <div class="map-container">
+                    <div id="map"></div>
+                    
+                    <!-- Algorithm Visualization Panel -->
+                    <div class="algorithm-panel" id="algorithm-panel" style="display: none;">
+                        <div class="algorithm-header">
+                            <h4><i class="fas fa-brain"></i> Dijkstra's Algorithm Visualization</h4>
+                            <div class="algorithm-controls">
+                                <button id="prev-step-btn" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-step-backward"></i> Previous
+                                </button>
+                                <span id="step-counter">Step 0 of 0</span>
+                                <button id="next-step-btn" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-step-forward"></i> Next
+                                </button>
+                                <button id="auto-play-btn" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-play"></i> Auto Play
+                                </button>
+                            </div>
+                        </div>
+                        <div class="algorithm-content">
+                            <div class="current-step">
+                                <h5>Current Step</h5>
+                                <p id="step-description">Ready to start algorithm visualization...</p>
+                            </div>
+                            <div class="algorithm-state">
+                                <div class="state-section">
+                                    <h6>Current Node</h6>
+                                    <span id="current-node">-</span>
+                                </div>
+                                <div class="state-section">
+                                    <h6>Visited Nodes</h6>
+                                    <span id="visited-nodes">None</span>
+                                </div>
+                                <div class="state-section">
+                                    <h6>Priority Queue</h6>
+                                    <span id="queue-state">Empty</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Legend -->
+                    <div class="map-legend">
+                        <h4><i class="fas fa-list"></i> Map Legend</h4>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #3388ff;"></span>
+                            <span>Shortest Route</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #ff6b6b;"></span>
+                            <span>Alternative Route 1</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #4ecdc4;"></span>
+                            <span>Alternative Route 2</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #45b7d1;"></span>
+                            <span>Campus Buildings</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Calculating route...</p>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast" id="toast">
+        <div class="toast-content">
+            <span class="toast-icon"></span>
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 UNILAG Campus Navigation System | Built with ❤️ for Final Year Project</p>
+            <p>
+                <i class="fas fa-code"></i> Technologies: Python, NetworkX, Flask, Leaflet.js, OpenStreetMap
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="./app.js"></script>
+</body>
+</html>
