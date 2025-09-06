@@ -49,33 +49,301 @@ UNILAG-Campus-Navigation/
 
 ---
 
-## Quick Start
+## 🚀 Step-by-Step Setup Guide for Colleagues
 
-### Prerequisites
-- Python 3.8 or higher
-- pip (Python package installer)
+### Prerequisites Check
 
-### Installation
+Before starting, ensure you have the following installed on your laptop:
 
-1. **Clone or download the project**
-   ```bash
-   cd /path/to/UNILAG-Campus-Navigation
-   ```
+| Requirement | Minimum Version | Check Command |
+|------------|----------------|---------------|
+| **Python** | 3.8+ | `python --version` or `python3 --version` |
+| **pip** | Latest | `pip --version` or `pip3 --version` |
+| **Git** | Any recent version | `git --version` |
+| **Web Browser** | Chrome, Firefox, Safari, Edge | Any modern browser |
 
-2. **Install Python dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+> **Note**: If you don't have Python installed, download it from [python.org](https://www.python.org/downloads/)
 
-3. **Run the server**
-   ```bash
-   python app.py
-   ```
+---
 
-4. **Open your browser**
-   ```
-   http://localhost:5001
-   ```
+### Step 1: Clone the Project
+
+Open your terminal/command prompt and run:
+
+```bash
+# Option 1: Clone from GitHub (if available)
+git clone https://github.com/your-username/UNILAG-Campus-Navigation.git
+cd UNILAG-Campus-Navigation
+
+# Option 2: If you received the project folder, navigate to it
+cd path/to/UNILAG-Campus-Navigation
+```
+
+**Verify you're in the right directory:**
+```bash
+ls -la
+# You should see: app.py, frontend/, backend/, requirements.txt, etc.
+```
+
+---
+
+### Step 2: Set Up Python Environment (Recommended)
+
+Create a virtual environment to avoid conflicts with other Python projects:
+
+```bash
+# Create virtual environment
+python -m venv campus_nav_env
+
+# Activate virtual environment
+# On Windows:
+campus_nav_env\Scripts\activate
+
+# On macOS/Linux:
+source campus_nav_env/bin/activate
+
+# You should see (campus_nav_env) at the beginning of your terminal prompt
+```
+
+---
+
+### Step 3: Install Dependencies
+
+Install all required Python packages:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Verify installation
+pip list
+# You should see: Flask, networkx, flask-cors, and other packages
+```
+
+**If you encounter any errors**, try:
+```bash
+# Alternative installation methods
+pip3 install -r requirements.txt
+# OR
+python -m pip install -r requirements.txt
+```
+
+---
+
+### Step 4: Start the Application
+
+You have two options to run the application:
+
+#### Option A: Using the Start Script (Recommended)
+```bash
+# Make the script executable (macOS/Linux)
+chmod +x start.sh
+
+# Run the start script
+./start.sh
+
+# Follow the prompts - select 'n' when asked about tests
+```
+
+#### Option B: Manual Startup
+Open **two separate terminal windows**:
+
+**Terminal 1 - Backend Server:**
+```bash
+cd UNILAG-Campus-Navigation
+python app.py
+# You should see: "Server starting on http://localhost:5001"
+```
+
+**Terminal 2 - Frontend Server:**
+```bash
+cd UNILAG-Campus-Navigation
+python frontend_server.py
+# You should see: "Serving at port 8080"
+```
+
+---
+
+### Step 5: Open the Application
+
+1. **Open your web browser**
+2. **Navigate to**: `http://localhost:8080`
+3. **You should see**: The UNILAG Campus Navigation interface with a map
+
+---
+
+### Step 6: Test the Application
+
+Follow these steps to verify everything is working:
+
+#### Test 1: Basic Navigation
+1. **Select Start Location**: Choose "Main Gate" from the dropdown
+2. **Select Destination**: Choose "Senate Building" from the dropdown
+3. **Click "Find Route"**
+4. **Expected Result**: You should see:
+   - A blue route line on the map
+   - Route information panel showing distance and time
+   - Step-by-step algorithm visualization
+
+#### Test 2: Alternative Routes
+1. **Keep the same start/end locations**
+2. **Click "Alternative Routes"**
+3. **Expected Result**: Multiple colored route lines showing different paths
+
+#### Test 3: Algorithm Visualization
+1. **After finding a route**, look for the "Algorithm Visualization" panel
+2. **Click the step navigation buttons** (Previous/Next)
+3. **Expected Result**: See how Dijkstra's algorithm works step-by-step
+
+---
+
+### 🛠️ Troubleshooting Common Issues
+
+#### Issue 1: "Port already in use"
+```bash
+# Kill processes using the ports
+# On macOS/Linux:
+lsof -ti:5001 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
+
+# On Windows:
+netstat -ano | findstr :5001
+taskkill /PID <PID_NUMBER> /F
+```
+
+#### Issue 2: "Module not found" errors
+```bash
+# Reinstall dependencies
+pip uninstall -r requirements.txt -y
+pip install -r requirements.txt
+```
+
+#### Issue 3: Python version conflicts
+```bash
+# Use specific Python version
+python3 app.py
+python3 frontend_server.py
+```
+
+#### Issue 4: Virtual environment issues
+```bash
+# Deactivate and recreate
+deactivate
+rm -rf campus_nav_env
+python -m venv campus_nav_env
+source campus_nav_env/bin/activate  # macOS/Linux
+# OR
+campus_nav_env\Scripts\activate     # Windows
+pip install -r requirements.txt
+```
+
+#### Issue 5: Browser doesn't show the map
+1. **Check console for errors** (F12 → Console tab)
+2. **Verify both servers are running**:
+   - Backend: `http://localhost:5001/api/nodes` should return JSON data
+   - Frontend: `http://localhost:8080` should show the interface
+3. **Try a different browser**
+
+---
+
+### 📱 Testing on Different Devices
+
+#### Desktop Testing
+- **Recommended browsers**: Chrome, Firefox, Safari, Edge
+- **Screen resolution**: Works best on screens 1024px+ wide
+
+#### Mobile Testing
+- **Open**: `http://YOUR_IP_ADDRESS:8080` on mobile browser
+- **Find your IP**: 
+  ```bash
+  # macOS/Linux:
+  ifconfig | grep inet
+  # Windows:
+  ipconfig
+  ```
+
+---
+
+### 🔧 Development Mode
+
+If you want to modify the code and see changes instantly:
+
+#### Backend Development
+```bash
+# Run with auto-reload
+export FLASK_DEBUG=1  # macOS/Linux
+set FLASK_DEBUG=1     # Windows
+python app.py
+```
+
+#### Frontend Development
+- Edit files in the `frontend/` directory
+- Refresh browser to see changes
+- No restart needed for HTML/CSS/JS changes
+
+---
+
+### 📊 Project Structure Overview
+
+```
+UNILAG-Campus-Navigation/
+├── 🐍 app.py                     # Main Flask server (Backend)
+├── 🌐 frontend_server.py         # Static file server (Frontend)
+├── 🚀 start.sh                   # Convenient startup script
+├── 📋 requirements.txt           # Python dependencies
+├── 📁 frontend/
+│   ├── 🗺️ index.html            # Main interface
+│   ├── 🎨 style.css             # Styling
+│   └── ⚡ app.js                # Map logic & API calls
+├── 📁 backend/
+│   ├── 📊 graph.py               # Graph algorithms
+│   ├── 🛣️ paths.py              # Pathfinding logic
+│   └── 📁 data/
+│       └── 🗃️ campus_nodes_edges.json  # Campus data
+└── 📁 scripts/                   # Additional utilities
+```
+
+---
+
+### ✅ Success Checklist
+
+Before considering the setup complete, verify:
+
+- [ ] **Backend server** is running on port 5001
+- [ ] **Frontend server** is running on port 8080
+- [ ] **Web interface** loads at `http://localhost:8080`
+- [ ] **Location dropdowns** are populated with campus locations
+- [ ] **"Find Route" button** generates a path on the map
+- [ ] **Route information panel** shows distance and time
+- [ ] **Alternative Routes** displays multiple path options
+- [ ] **Algorithm visualization** shows step-by-step execution
+- [ ] **No error messages** in browser console (F12)
+
+---
+
+### 🆘 Need Help?
+
+If you encounter any issues:
+
+1. **Check the terminal output** for error messages
+2. **Open browser developer tools** (F12) and check the Console tab
+3. **Verify all prerequisites** are installed correctly
+4. **Try the troubleshooting steps** above
+5. **Contact the project maintainer** with:
+   - Your operating system (Windows/macOS/Linux)
+   - Python version (`python --version`)
+   - Error messages (copy exact text)
+   - Steps you followed before the error occurred
+
+---
+
+### 💡 Quick Tips for Colleagues
+
+- **Always activate the virtual environment** before working on the project
+- **Keep both terminal windows open** while using the application
+- **Use Ctrl+C** to stop the servers when done
+- **The application works best with a stable internet connection** (for map tiles)
+- **If something breaks, try restarting both servers**
 
 ---
 

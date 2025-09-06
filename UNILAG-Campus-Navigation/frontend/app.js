@@ -245,6 +245,8 @@ async function findRoute() {
     const startLocation = startLocationSelect.value;
     const endLocation = endLocationSelect.value;
     
+    console.log('🚀 Finding route from:', startLocation, 'to:', endLocation);
+    
     if (!startLocation || !endLocation) {
         showError('Please select both starting location and destination');
         return;
@@ -258,6 +260,7 @@ async function findRoute() {
     try {
         showLoading('Finding optimal route...');
         
+        console.log('📡 Making API request to shortest-path endpoint...');
         const response = await fetch('http://localhost:5001/api/shortest-path', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -267,12 +270,18 @@ async function findRoute() {
             })
         });
         
+        console.log('📡 API Response status:', response.status);
+        console.log('📡 API Response headers:', response.headers);
+        
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || `HTTP ${response.status}`);
         }
         
         const routeData = await response.json();
+        console.log('📊 Route data received:', routeData);
+        console.log('📊 Path:', routeData.path);
+        console.log('📊 Comprehensive analysis:', routeData.comprehensive_analysis);
         
         if (!routeData.path || routeData.path.length === 0) {
             throw new Error('No route found between selected locations');
@@ -287,7 +296,7 @@ async function findRoute() {
         showAlgorithmVisualization();
         
         hideLoading();
-        console.log('✅ Route found and displayed');
+        console.log('✅ Route found and displayed successfully');
         
     } catch (error) {
         console.error('❌ Error finding route:', error);
@@ -306,7 +315,7 @@ async function findAlternativeRoutes() {
     }
     
     try {
-        showLoading('Finding alternative routes...');
+        showLoading('Finding all possible alternative routes...');
         
         const response = await fetch('http://localhost:5001/api/alternative-routes', {
             method: 'POST',
@@ -314,7 +323,7 @@ async function findAlternativeRoutes() {
             body: JSON.stringify({
                 start: startLocation,
                 end: endLocation,
-                k: 3
+                k: 5  // Show top 5 alternative routes
             })
         });
         
@@ -326,10 +335,10 @@ async function findAlternativeRoutes() {
         const data = await response.json();
         alternativeRoutes = data.routes || [];
         
-        displayAlternativeRoutes(alternativeRoutes);
+        displayAlternativeRoutes(alternativeRoutes, data.comprehensive_analysis, data.total_possible_paths);
         hideLoading();
         
-        console.log(`✅ Found ${data.count} alternative routes`);
+        console.log(`✅ Found ${data.showing_top} of ${data.total_possible_paths} total possible routes`);
         
     } catch (error) {
         console.error('❌ Error finding alternative routes:', error);
@@ -423,45 +432,60 @@ function displayRoute(routeData) {
     }
 }
 
-function displayAlternativeRoutes(routes) {
+function displayAlternativeRoutes(routes, comprehensiveAnalysis, totalPossiblePaths) {
     routeLayer.clearLayers();
     
-    const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545'];
+    const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1'];
     
     routes.forEach((route, index) => {
         if (route.path_coordinates && route.path_coordinates.length > 0) {
             const color = colors[index % colors.length];
             const polyline = L.polyline(route.path_coordinates, {
                 color: color,
-                weight: 3,
-                opacity: 0.7,
+                weight: index === 0 ? 4 : 3,
+                opacity: index === 0 ? 0.9 : 0.7,
                 dashArray: index === 0 ? null : '10,5'
             }).addTo(routeLayer);
             
             polyline.bindPopup(`
-                <strong>Route ${index + 1}</strong><br>
+                <strong>Route ${index + 1} ${route.is_optimal ? '(OPTIMAL)' : ''}</strong><br>
                 Distance: ${route.distance_km ? route.distance_km + ' km' : route.distance || 'N/A'}<br>
                 Walking Time: ${route.walking_time_minutes || 'N/A'} minutes<br>
-                Nodes: ${route.path ? route.path.length : 0}
+                Nodes: ${route.path ? route.path.length : 0}<br>
+                ${route.is_optimal ? '<br><strong>🎯 Dijkstra\'s Choice</strong>' : ''}
             `);
         }
     });
     
-    // Update route info
+    // Update route info with comprehensive analysis
     if (routes.length > 0) {
+        let analysisHtml = '';
+        if (comprehensiveAnalysis && comprehensiveAnalysis.dijkstra_choice) {
+            analysisHtml = `
+                <div class="mb-3" style="font-size: 16px; line-height: 1.6; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <div><strong>${comprehensiveAnalysis.dijkstra_choice}</strong></div>
+                    <div><strong>${comprehensiveAnalysis.total_routes_found}</strong></div>
+                    <div><strong>${comprehensiveAnalysis.shortest_route}</strong></div>
+                    <div><strong>${comprehensiveAnalysis.longest_route}</strong></div>
+                    <div><strong>${comprehensiveAnalysis.why_optimal}</strong></div>
+                </div>
+            `;
+        }
+        
         routeInfo.innerHTML = `
             <div class="alert alert-info">
-                <h5><i class="fas fa-route"></i> Alternative Routes Found</h5>
-                <p>Found ${routes.length} alternative routes using enhanced pathfinding. Click on any route to see details.</p>
+                <h5><i class="fas fa-route"></i> All Possible Routes Analysis</h5>
+                ${analysisHtml}
+                <p>Showing ${routes.length} routes out of ${totalPossiblePaths || 'N/A'} total possible paths. Click on any route to see details.</p>
                 ${routes.map((route, index) => `
-                    <div class="route-option" style="border-left: 4px solid ${colors[index % colors.length]}; margin-bottom: 10px; padding: 10px;">
-                        <strong>Route ${index + 1}:</strong> ${route.path ? route.path.join(' → ') : 'N/A'}
+                    <div class="route-option" style="border-left: 4px solid ${colors[index % colors.length]}; margin-bottom: 10px; padding: 10px; ${route.is_optimal ? 'background-color: #e8f5e8;' : ''}">
+                        <strong>Route ${index + 1}${route.is_optimal ? ' 🎯 (OPTIMAL)' : ''}:</strong> ${route.path ? route.path.join(' → ') : 'N/A'}
                         <br><small><strong>Distance:</strong> ${route.distance_km ? route.distance_km + ' km' : route.distance || 'N/A'} | 
                         <strong>Time:</strong> ${route.walking_time_minutes || 'N/A'} min | 
-                        <strong>Nodes:</strong> ${route.path ? route.path.length : 0}</small>
+                        <strong>Nodes:</strong> ${route.path ? route.path.length : 0}${route.is_optimal ? ' | <strong>Shortest Distance</strong>' : ''}</small>
                     </div>
                 `).join('')}
-                <small class="text-muted"><i class="fas fa-info-circle"></i> All distances calculated using real-world Haversine distances.</small>
+                <small class="text-muted"><i class="fas fa-info-circle"></i> Comprehensive analysis using depth-first search to find all possible paths.</small>
             </div>
         `;
     }
@@ -469,32 +493,67 @@ function displayAlternativeRoutes(routes) {
 
 function displayRouteInfo(routeData) {
     const optimizationInfo = routeData.optimization_info || {};
+    const analysis = routeData.comprehensive_analysis || {};
     
-    routeInfo.innerHTML = `
-        <div class="alert alert-success">
-            <h5><i class="fas fa-route"></i> Enhanced Route Found</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Path:</strong> ${routeData.path.join(' → ')}</p>
-                    <p><strong>Distance:</strong> ${routeData.total_distance_km || (routeData.total_distance / 1000).toFixed(3)} km (${routeData.total_distance}m)</p>
-                    <p><strong>Walking Time:</strong> ${routeData.walking_time_minutes} minutes</p>
-                    <p><strong>Route Type:</strong> <span class="badge badge-info">Real-world distances</span></p>
+    // Check if we have comprehensive analysis data
+    if (analysis.dijkstra_choice) {
+        routeInfo.innerHTML = `
+            <div class="alert alert-success">
+                <h5><i class="fas fa-route"></i> Route Analysis Complete</h5>
+                <div class="mb-3" style="font-size: 16px; line-height: 1.6;">
+                    <div><strong>${analysis.dijkstra_choice}</strong></div>
+                    <div><strong>${analysis.total_routes_found}</strong></div>
+                    <div><strong>${analysis.shortest_route}</strong></div>
+                    <div><strong>${analysis.longest_route}</strong></div>
+                    <div><strong>${analysis.why_optimal}</strong></div>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Algorithm:</strong> ${optimizationInfo.algorithm || 'Enhanced Dijkstra with Haversine'}</p>
-                    <p><strong>Distance Metric:</strong> ${optimizationInfo.distance_metric || 'Haversine distance'}</p>
-                    <p><strong>Nodes Explored:</strong> ${routeData.nodes_explored || 'N/A'}</p>
-                    <p><strong>Academic Buildings:</strong> ${routeData.academic_buildings_passed || 0}</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Path:</strong> ${routeData.path.join(' → ')}</p>
+                        <p><strong>Walking Time:</strong> ${routeData.walking_time_minutes} minutes</p>
+                        <p><strong>Route Type:</strong> <span class="badge badge-info">Optimized Path</span></p>
+                        <p><strong>All Possible Paths:</strong> ${routeData.all_possible_paths || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Algorithm:</strong> ${optimizationInfo.algorithm || 'Enhanced Dijkstra with Haversine'}</p>
+                        <p><strong>Nodes Explored:</strong> ${routeData.nodes_explored || 'N/A'}</p>
+                        <p><strong>Academic Buildings:</strong> ${routeData.academic_buildings_passed || 0}</p>
+                        <p><strong>Connected Nodes:</strong> ${routeData.connected_nodes_count || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted"><i class="fas fa-info-circle"></i> Comprehensive analysis of all possible routes using enhanced pathfinding with depth-first search exploration.</small>
                 </div>
             </div>
-            <div class="mt-2">
-                <small><strong>Why Optimal:</strong> ${optimizationInfo.why_optimal || 'Uses real-world distances for accurate routing'}</small>
+        `;
+    } else {
+        // Fallback to original display if comprehensive analysis not available
+        routeInfo.innerHTML = `
+            <div class="alert alert-success">
+                <h5><i class="fas fa-route"></i> Enhanced Route Found</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Path:</strong> ${routeData.path.join(' → ')}</p>
+                        <p><strong>Distance:</strong> ${routeData.total_distance_km || (routeData.total_distance / 1000).toFixed(3)} km (${routeData.total_distance}m)</p>
+                        <p><strong>Walking Time:</strong> ${routeData.walking_time_minutes} minutes</p>
+                        <p><strong>Route Type:</strong> <span class="badge badge-info">Real-world distances</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Algorithm:</strong> ${optimizationInfo.algorithm || 'Enhanced Dijkstra with Haversine'}</p>
+                        <p><strong>Distance Metric:</strong> ${optimizationInfo.distance_metric || 'Haversine distance'}</p>
+                        <p><strong>Nodes Explored:</strong> ${routeData.nodes_explored || 'N/A'}</p>
+                        <p><strong>Academic Buildings:</strong> ${routeData.academic_buildings_passed || 0}</p>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small><strong>Why Optimal:</strong> ${optimizationInfo.why_optimal || 'Uses real-world distances for accurate routing'}</small>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted"><i class="fas fa-info-circle"></i> Distances calculated using Haversine formula for accurate great-circle distances between coordinates.</small>
+                </div>
             </div>
-            <div class="mt-2">
-                <small class="text-muted"><i class="fas fa-info-circle"></i> Distances calculated using Haversine formula for accurate great-circle distances between coordinates.</small>
-            </div>
-        </div>
-    `;
+        `;
+    }
 }
 
 function displayEmergencyInfo(routeData) {
