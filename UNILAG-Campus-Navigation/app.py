@@ -6,6 +6,9 @@ Enhanced with Dijkstra Algorithm Visualization
 
 import heapq
 import json
+import math
+import copy
+import time
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
@@ -662,65 +665,6 @@ def find_alternative_routes():
         print(f"Error in find_alternative_routes: {e}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
-@app.route('/api/emergency-route', methods=['POST'])
-def find_emergency_route():
-    """Find emergency route to nearest appropriate destination"""
-    try:
-        data = request.json
-        start_location = data.get('start')
-        emergency_type = data.get('emergency_type', 'medical')
-        
-        if not start_location:
-            return jsonify({'error': 'Start location is required'}), 400
-        
-        # Load campus data and build graph
-        campus_data = load_campus_data()
-        graph = build_graph(campus_data['edges'])
-        
-        # Emergency destinations based on type
-        emergency_destinations = {
-            'medical': ['Health Centre', 'Medical Centre', 'Administrative Block'],
-            'security': ['Security Post', 'Main Gate', 'Administrative Block'],
-            'fire': ['Main Gate', 'Security Post', 'Administrative Block'],
-            'evacuation': ['Main Gate', 'Sports Complex', 'University Library']
-        }
-        
-        destinations = emergency_destinations.get(emergency_type, ['Main Gate'])
-        best_route = None
-        shortest_distance = float('inf')
-        
-        # Find the closest emergency destination
-        for dest in destinations:
-            if dest in graph:
-                result = dijkstra_with_steps(graph, start_location, dest)
-                if result['path'] and result['distance'] < shortest_distance:
-                    shortest_distance = result['distance']
-                    coordinates = campus_data['coordinates']
-                    path_coordinates = []
-                    for location in result['path']:
-                        if location in coordinates:
-                            path_coordinates.append(coordinates[location])
-                    
-                    best_route = {
-                        'path': result['path'],
-                        'total_distance': int(result['distance']),
-                        'path_coordinates': path_coordinates,
-                        'algorithm_steps': result['steps'],
-                        'emergency_type': emergency_type,
-                        'destination_type': dest,
-                        'priority': 'HIGH',
-                        'estimated_time': max(1, int(result['distance'] / 120))  # Faster walking for emergency
-                    }
-        
-        if not best_route:
-            return jsonify({'error': 'No emergency route found'}), 404
-        
-        return jsonify(best_route)
-    
-    except Exception as e:
-        print(f"Error in find_emergency_route: {e}")
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
-
 @app.route('/api/nodes', methods=['GET'])
 def get_all_nodes():
     """Get all available campus nodes/locations"""
@@ -734,19 +678,409 @@ def get_all_nodes():
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+@app.route('/api/bigdata/uk-cities', methods=['GET'])
+def get_uk_cities():
+    """Get UK cities dataset for big data analysis"""
+    uk_cities = {
+        'cities': ['London','Birmingham','Manchester','Liverpool','Bristol','Newcastle upon Tyne','Sheffield','Cardiff','Leeds','Nottingham','Leicester','Coventry','Bradford','Newcastle','Stoke-on-Trent','Wolverhampton','Derby','Swansea','Plymouth','Reading','Hull','Preston','Luton','Portsmouth','Southampton','Sunderland','Warrington','Bournemouth','Swindon','Oxford','Huddersfield','Slough','Blackpool','Middlesbrough','Ipswich','Telford','York','West Bromwich','Peterborough','Stockport','Brighton','Hastings','Exeter','Chelmsford','Chester','St Helens','Colchester','Crawley','Stevenage','Birkenhead','Bolton','Stockton-on-Tees','Watford','Gloucester','Rotherham','Newport','Cambridge','St Albans','Bury','Southend-on-Sea','Woking','Maidstone','Lincoln','Gillingham','Chesterfield','Oldham','Charlton','Aylesbury','Keighley','Bangor','Scunthorpe','Guildford','Grimsby','Ellesmere Port','Blackburn','Hove','Hartlepool','Taunton','Maidenhead','Aldershot','Great Yarmouth','Rossendale'],
+        'coordinates': {
+            'London': [51.509865, -0.118092],
+            'Birmingham': [52.4862, -1.8904],
+            'Manchester': [53.483959, -2.244644],
+            'Liverpool': [53.4084, -2.9916],
+            'Bristol': [51.4545, -2.5879],
+            'Newcastle upon Tyne': [54.9784, -1.6174],
+            'Sheffield': [53.3811, -1.4701],
+            'Cardiff': [51.4816, -3.1791],
+            'Leeds': [53.8008, -1.5491],
+            'Nottingham': [52.9548, -1.1581],
+            'Leicester': [52.6369, -1.1398],
+            'Coventry': [52.4068, -1.5197],
+            'Bradford': [53.7957, -1.7593],
+            'Newcastle': [55.007, -1.6174],
+            'Stoke-on-Trent': [53.0027, -2.1794],
+            'Wolverhampton': [52.5862, -2.1288],
+            'Derby': [52.9228, -1.4777],
+            'Swansea': [51.6214, -3.9436],
+            'Plymouth': [50.3755, -4.1427],
+            'Reading': [51.4543, -0.9781],
+            'Hull': [53.7443, -0.3326],
+            'Preston': [53.7632, -2.7031],
+            'Luton': [51.8787, -0.42],
+            'Portsmouth': [50.8195, -1.0874],
+            'Southampton': [50.9097, -1.4044],
+            'Sunderland': [54.9069, -1.3834],
+            'Warrington': [53.3872, -2.5925],
+            'Bournemouth': [50.7208, -1.9046],
+            'Swindon': [51.5686, -1.7722],
+            'Oxford': [51.752, -1.2577],
+            'Huddersfield': [53.649, -1.7849],
+            'Slough': [51.5095, -0.5954],
+            'Blackpool': [53.8175, -3.0357],
+            'Middlesbrough': [54.5742, -1.2356],
+            'Ipswich': [52.0567, -1.1482],
+            'Telford': [52.6784, -2.4453],
+            'York': [53.959, -1.0815],
+            'West Bromwich': [52.5187, -1.9945],
+            'Peterborough': [52.5695, -0.2405],
+            'Stockport': [53.4084, -2.1493],
+            'Brighton': [50.8225, -0.1372],
+            'Hastings': [50.8552, -0.5723],
+            'Exeter': [50.7184, -3.5339],
+            'Chelmsford': [51.7361, -0.4791],
+            'Chester': [53.1934, -2.8931],
+            'St Helens': [53.4539, -2.7375],
+            'Colchester': [51.8892, -0.9042],
+            'Crawley': [51.1124, -0.1831],
+            'Stevenage': [51.9038, -0.1966],
+            'Birkenhead': [53.3934, -3.0148],
+            'Bolton': [53.5769, -2.428],
+            'Stockton-on-Tees': [54.5741, -1.3187],
+            'Watford': [51.6562, -0.39],
+            'Gloucester': [51.8642, -2.2382],
+            'Rotherham': [53.432, -1.3502],
+            'Newport': [51.5881, -3.1409],
+            'Cambridge': [52.2053, -0.1218],
+            'St Albans': [51.752, -0.339],
+            'Bury': [53.591, -2.298],
+            'Southend-on-Sea': [51.5406, 0.711],
+            'Woking': [51.3169, -0.56],
+            'Maidstone': [51.2704, -0.5227],
+            'Lincoln': [53.2307, -0.5406],
+            'Gillingham': [51.3898, -0.5486],
+            'Chesterfield': [53.235, -1.4216],
+            'Oldham': [53.5444, -2.1183],
+            'Charlton': [51.4941, -0.068],
+            'Aylesbury': [51.8156, -0.8084],
+            'Keighley': [53.867, -1.9064],
+            'Bangor': [53.2274, -4.1297],
+            'Scunthorpe': [53.5896, -0.6544],
+            'Guildford': [51.2362, -0.5704],
+            'Grimsby': [53.5675, -0.0802],
+            'Ellesmere Port': [53.2826, -2.8976],
+            'Blackburn': [53.7486, -2.4877],
+            'Hove': [50.8279, -0.1688],
+            'Hartlepool': [54.6892, -1.2122],
+            'Taunton': [51.0143, -3.1036],
+            'Maidenhead': [51.522, -0.7205],
+            'Aldershot': [51.2484, -0.755],
+            'Great Yarmouth': [52.6083, -1.7303],
+            'Rossendale': [53.6458, -2.2864]
+        },
+        'count': 82,
+        'description': 'UK Cities dataset for algorithm performance testing'
+    }
+    
+    return jsonify(uk_cities)
+
+@app.route('/api/bigdata/build-graph', methods=['POST'])
+def build_bigdata_graph():
+    """Build graph for UK cities based on distance threshold"""
+    try:
+        request_data = request.get_json()
+        max_distance = request_data.get('max_distance', 200)  # km
+        
+        # Get UK cities data
+        uk_cities_response = get_uk_cities()
+        uk_cities_data = uk_cities_response.get_json()
+        
+        coordinates = uk_cities_data['coordinates']
+        cities = list(coordinates.keys())
+        
+        # Build graph based on distance threshold
+        graph = {}
+        connections = 0
+        total_distance = 0
+        
+        for city1 in cities:
+            graph[city1] = {}
+            coords1 = coordinates[city1]
+            
+            for city2 in cities:
+                if city1 != city2:
+                    coords2 = coordinates[city2]
+                    distance = haversine_distance(coords1[0], coords1[1], coords2[0], coords2[1])
+                    
+                    if distance <= max_distance:
+                        graph[city1][city2] = distance
+                        connections += 1
+                        total_distance += distance
+        
+        # Calculate statistics
+        avg_distance = total_distance / connections if connections > 0 else 0
+        max_possible = len(cities) * (len(cities) - 1)
+        density = (connections / max_possible) * 100 if max_possible > 0 else 0
+        
+        return jsonify({
+            'graph': graph,
+            'statistics': {
+                'total_cities': len(cities),
+                'total_connections': connections,
+                'average_distance': round(avg_distance, 2),
+                'graph_density': round(density, 2),
+                'max_distance_threshold': max_distance
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to build graph: {str(e)}'}), 500
+
+@app.route('/api/bigdata/shortest-path', methods=['POST'])
+def bigdata_shortest_path():
+    """Find shortest path in UK cities graph"""
+    try:
+        request_data = request.get_json()
+        start_city = request_data.get('start')
+        end_city = request_data.get('end')
+        graph = request_data.get('graph')
+        
+        if not all([start_city, end_city, graph]):
+            return jsonify({'error': 'Missing required parameters'}), 400
+        
+        # Run enhanced Dijkstra with performance tracking
+        import time
+        start_time = time.time()
+        
+        result = enhanced_dijkstra_algorithm_bigdata(start_city, end_city, graph)
+        
+        execution_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+        
+        # Get coordinates for path visualization
+        uk_cities_response = get_uk_cities()
+        uk_cities_data = uk_cities_response.get_json()
+        coordinates = uk_cities_data['coordinates']
+        
+        path_coordinates = []
+        if result['path']:
+            path_coordinates = [coordinates[city] for city in result['path'] if city in coordinates]
+        
+        return jsonify({
+            'path': result['path'],
+            'path_coordinates': path_coordinates,
+            'total_distance': round(result['distance'], 2),
+            'execution_time_ms': round(execution_time, 2),
+            'nodes_explored': result.get('nodes_explored', 0),
+            'algorithm_steps': result.get('steps', 0),
+            'performance_metrics': {
+                'graph_size': len(graph),
+                'complexity': f'O(V²) where V = {len(graph)}',
+                'efficiency_score': max(0, 100 - execution_time/10)
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to find path: {str(e)}'}), 500
+
+def enhanced_dijkstra_algorithm_bigdata(start_node, end_node, graph):
+    """Enhanced Dijkstra algorithm with performance tracking for big data"""
+    nodes = list(graph.keys())
+    
+    if start_node not in nodes or end_node not in nodes:
+        return {'path': [], 'distance': float('inf'), 'nodes_explored': 0, 'steps': 0}
+    
+    # Initialize distances and tracking
+    INFINITY = float('inf')
+    distances = {node: INFINITY for node in nodes}
+    distances[start_node] = 0
+    previous_nodes = {}
+    visited = set()
+    unvisited = set(nodes)
+    
+    nodes_explored = 0
+    steps = 0
+    
+    while unvisited:
+        steps += 1
+        
+        # Find unvisited node with minimum distance
+        current_node = min(unvisited, key=lambda node: distances[node])
+        
+        if distances[current_node] == INFINITY:
+            break  # No more reachable nodes
+        
+        if current_node == end_node:
+            break  # Reached destination
+        
+        visited.add(current_node)
+        unvisited.remove(current_node)
+        nodes_explored += 1
+        
+        # Update distances to neighbors
+        neighbors = graph.get(current_node, {})
+        for neighbor, weight in neighbors.items():
+            if neighbor in unvisited:
+                new_distance = distances[current_node] + weight
+                if new_distance < distances[neighbor]:
+                    distances[neighbor] = new_distance
+                    previous_nodes[neighbor] = current_node
+    
+    # Reconstruct path
+    path = []
+    current = end_node
+    while current is not None:
+        path.append(current)
+        current = previous_nodes.get(current)
+    path.reverse()
+    
+    # Verify path is valid
+    if not path or path[0] != start_node:
+        path = []
+    
+    return {
+        'path': path,
+        'distance': distances.get(end_node, INFINITY),
+        'nodes_explored': nodes_explored,
+        'steps': steps
+    }
+
+@app.route('/api/bigdata/alternative-routes', methods=['POST'])
+def bigdata_alternative_routes():
+    """Find alternative routes for big data scenario"""
+    try:
+        request_data = request.get_json()
+        start_city = request_data.get('start')
+        end_city = request_data.get('end')
+        graph = request_data.get('graph', {})
+        k = request_data.get('k', 5)  # Number of alternative routes
+        
+        if not start_city or not end_city:
+            return jsonify({'error': 'Start and end cities are required'}), 400
+            
+        if not graph:
+            return jsonify({'error': 'Graph data is required'}), 400
+            
+        print(f"🔍 Finding {k} alternative routes from {start_city} to {end_city}")
+        
+        # Find k shortest paths using edge removal technique
+        routes = find_k_shortest_paths_bigdata(start_city, end_city, graph, k)
+        
+        # Create comprehensive analysis
+        analysis = create_bigdata_comprehensive_analysis(routes, start_city, end_city)
+        
+        return jsonify({
+            'routes': routes,
+            'comprehensive_analysis': analysis,
+            'total_routes_found': len(routes),
+            'showing_top': min(k, len(routes)),
+            'algorithm': 'K-Shortest Paths with Edge Removal',
+            'graph_size': len(graph)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in bigdata alternative routes: {str(e)}")
+        return jsonify({'error': f'Failed to find alternative routes: {str(e)}'}), 500
+
+def find_k_shortest_paths_bigdata(start, end, graph, k=5):
+    """Find k shortest paths using iterative edge removal"""
+    routes = []
+    temp_graph = copy.deepcopy(graph)
+    
+    # Find first shortest path
+    first_result = enhanced_dijkstra_algorithm_bigdata(start, end, temp_graph)
+    if first_result['path']:
+        routes.append({
+            'path': first_result['path'],
+            'distance': first_result['distance'],
+            'nodes_explored': first_result['nodes_explored'],
+            'steps': first_result['steps'],
+            'route_id': 1,
+            'is_optimal': True
+        })
+    
+    # Find alternative routes by removing edges
+    for i in range(1, k):
+        if not routes:
+            break
+            
+        best_alternative = find_best_alternative_bigdata(start, end, temp_graph, routes)
+        
+        if best_alternative and best_alternative['path']:
+            routes.append({
+                'path': best_alternative['path'],
+                'distance': best_alternative['distance'],
+                'nodes_explored': best_alternative['nodes_explored'],
+                'steps': best_alternative['steps'],
+                'route_id': i + 1,
+                'is_optimal': False
+            })
+            
+            # Remove some edges from this path to encourage diversity
+            remove_edges_from_path(temp_graph, best_alternative['path'])
+        else:
+            break
+    
+    return routes
+
+def find_best_alternative_bigdata(start, end, graph, existing_routes):
+    """Find best alternative route by temporarily removing edges"""
+    best_alternative = None
+    best_distance = float('inf')
+    
+    for route in existing_routes:
+        if len(route['path']) < 2:
+            continue
+            
+        # Try removing each edge in existing routes
+        for i in range(len(route['path']) - 1):
+            node_a = route['path'][i]
+            node_b = route['path'][i + 1]
+            
+            # Temporarily remove edge
+            temp_graph = copy.deepcopy(graph)
+            if node_a in temp_graph and node_b in temp_graph[node_a]:
+                del temp_graph[node_a][node_b]
+            if node_b in temp_graph and node_a in temp_graph[node_b]:
+                del temp_graph[node_b][node_a]
+            
+            # Find alternative path
+            alt_result = enhanced_dijkstra_algorithm_bigdata(start, end, temp_graph)
+            
+            if alt_result['path'] and alt_result['distance'] < best_distance:
+                best_alternative = alt_result
+                best_distance = alt_result['distance']
+    
+    return best_alternative
+
+def remove_edges_from_path(graph, path):
+    """Remove some edges from path to encourage route diversity"""
+    edges_to_remove = max(1, len(path) // 4)
+    
+    for i in range(min(edges_to_remove, len(path) - 1)):
+        node_a = path[i]
+        node_b = path[i + 1]
+        
+        if node_a in graph and node_b in graph[node_a]:
+            del graph[node_a][node_b]
+        if node_b in graph and node_a in graph[node_b]:
+            del graph[node_b][node_a]
+
+def create_bigdata_comprehensive_analysis(routes, start_city, end_city):
+    """Create comprehensive analysis for big data alternative routes"""
+    if not routes:
+        return {}
+    
+    optimal_route = next((route for route in routes if route.get('is_optimal')), routes[0])
+    shortest_distance = min(route['distance'] for route in routes)
+    longest_distance = max(route['distance'] for route in routes)
+    total_routes = len(routes)
+    
+    difference_km = longest_distance - shortest_distance
+    
+    analysis = {
+        'dijkstra_choice': f"🎯 BIG DATA OPTIMAL: {optimal_route['distance']:.2f}km across {len(optimal_route['path'])} cities",
+        'total_routes_found': f"📊 FOUND: {total_routes} alternative routes in large-scale network",
+        'shortest_route': f"🟢 Shortest: {shortest_distance:.2f}km (Dijkstra's guarantee)",
+        'longest_route': f"🔴 Longest: {longest_distance:.2f}km (+{difference_km:.2f}km longer)",
+        'why_optimal': f"🧠 BIG DATA EFFICIENCY: Processed {optimal_route['nodes_explored']} nodes in {optimal_route['steps']} steps using optimized Dijkstra implementation",
+        'scalability_note': f"⚡ SCALABLE: Algorithm maintains O(V²) complexity even with {len(routes)} routes across large city network"
+    }
+    
+    return analysis
+
 if __name__ == '__main__':
-    print("🚀 Starting UNILAG Campus Navigation Server...")
-    print("📍 Loading campus data...")
-    
-    # Verify data file exists
-    data_file = '/Users/mac/Desktop/school/final-year/UNILAG-Campus-Navigation/backend/data/campus_nodes_edges.json'
-    if os.path.exists(data_file):
-        data = load_campus_data()
-        print(f"✅ Loaded {len(data.get('nodes', []))} campus locations")
-        print(f"✅ Loaded {len(data.get('edges', []))} connections")
-        print(f"✅ Loaded {len(data.get('coordinates', {}))} coordinate mappings")
-    else:
-        print(f"❌ Error: {data_file} not found")
-    
-    print("🌐 Server starting on http://localhost:5001")
-    app.run(debug=True, port=5001)
+    print("🚀 Starting UNILAG Campus Navigation System...")
+    print("🎯 Features: Campus Navigation | Big Data Analysis | Alternative Routes")
+    print("📊 Serving on http://localhost:5001")
+    print("📍 Campus Navigation: http://localhost:5001")
+    print("🌍 Big Data Analysis: http://localhost:5001/bigdata")
+    app.run(debug=True, host='0.0.0.0', port=5001)

@@ -6,13 +6,12 @@
     <title>UNILAG Campus Navigation System</title>
     
     <!-- Leaflet CSS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="./style.css">
-    
-    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="./style.css">    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -21,6 +20,14 @@
         <div class="container">
             <h1><i class="fas fa-map-marked-alt"></i> UNILAG Campus Navigation</h1>
             <p>Find the best routes across University of Lagos campus</p>
+            <nav style="margin-top: 15px;">
+                <a href="bigdata.html" class="btn btn-secondary" style="background: #667eea; color: white; text-decoration: none; padding: 8px 16px; border-radius: 5px; margin-right: 10px;">
+                    <i class="fas fa-database"></i> Big Data Analysis
+                </a>
+                <a href="#" class="btn btn-secondary" style="background: #28a745; color: white; text-decoration: none; padding: 8px 16px; border-radius: 5px;">
+                    <i class="fas fa-info-circle"></i> Documentation
+                </a>
+            </nav>
         </div>
     </header>
 
@@ -58,28 +65,11 @@
                             <button id="alternativeRoutes" class="btn btn-secondary">
                                 <i class="fas fa-list"></i> Find Alternatives
                             </button>
-                            <button id="emergencyRoute" class="btn btn-emergency">
-                                <i class="fas fa-exclamation-triangle"></i> Emergency
+                            <button id="toggleVisualization" class="btn btn-info">
+                                <i class="fas fa-eye"></i> Show Algorithm
                             </button>
                             <button id="clearRoute" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Clear
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Dynamic Updates Section -->
-                    <div class="control-section">
-                        <h3><i class="fas fa-construction"></i> Traffic & Construction</h3>
-                        
-                        <div class="traffic-controls">
-                            <button id="simulate-traffic-btn" class="btn btn-warning">
-                                <i class="fas fa-car"></i> Simulate Heavy Traffic
-                            </button>
-                            <button id="simulate-construction-btn" class="btn btn-warning">
-                                <i class="fas fa-hard-hat"></i> Simulate Construction
-                            </button>
-                            <button id="reset-graph-btn" class="btn btn-info">
-                                <i class="fas fa-refresh"></i> Reset Conditions
                             </button>
                         </div>
                     </div>

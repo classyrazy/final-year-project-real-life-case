@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big Data Scenario - UNILAG Campus Navigation</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="./style.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .bigdata-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+        }
+        
+        .bigdata-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .bigdata-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            height: 400px;
+        }
+        
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .metric-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bigdata-header">
+        <div class="container">
+            <h1><i class="fas fa-database"></i> Big Data Algorithm Analysis</h1>
+            <p>Testing Dijkstra's Algorithm Performance with 82 UK Cities</p>
+            <nav style="margin-top: 20px;">
+                <a href="index.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Campus Navigation
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="bigdata-container">
+        <!-- Statistics Overview -->
+        <section class="stats-overview">
+            <h2><i class="fas fa-chart-bar"></i> Dataset Overview</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-cities">82</div>
+                    <div class="stat-label">UK Cities</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-connections">0</div>
+                    <div class="stat-label">Generated Connections</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="graph-density">0%</div>
+                    <div class="stat-label">Graph Density</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avg-distance">0 km</div>
+                    <div class="stat-label">Average Distance</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls -->
+        <section class="bigdata-controls">
+            <h3><i class="fas fa-cogs"></i> Algorithm Testing Controls</h3>
+            <div class="input-group" style="margin: 20px 0;">
+                <label>Maximum Connection Distance (km):</label>
+                <input type="range" id="max-distance" min="50" max="500" value="200" style="margin: 0 10px;">
+                <span id="distance-value">200 km</span>
+            </div>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0;">
+                <select id="start-city" class="location-select">
+                    <option value="">Select starting city...</option>
+                </select>
+                <select id="end-city" class="location-select">
+                    <option value="">Select destination city...</option>
+                </select>
+                <button id="build-graph-btn" class="btn btn-primary">
+                    <i class="fas fa-project-diagram"></i> Build Graph
+                </button>
+                <button id="find-route-btn" class="btn btn-success">
+                    <i class="fas fa-route"></i> Find Route
+                </button>
+                <button id="find-alternatives-btn" class="btn btn-info">
+                    <i class="fas fa-list"></i> Find Alternatives
+                </button>
+                <button id="benchmark-btn" class="btn btn-warning">
+                    <i class="fas fa-stopwatch"></i> Run Benchmark
+                </button>
+            </div>
+        </section>
+
+        <!-- Map and Performance -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            <!-- Map Container -->
+            <div class="map-container" style="height: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div id="bigdata-map" style="height: 100%; border-radius: 10px;"></div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="performance-container">
+                <h3><i class="fas fa-tachometer-alt"></i> Performance Metrics</h3>
+                <div class="performance-metrics">
+                    <div class="metric-item">
+                        <h4>Execution Time</h4>
+                        <div id="execution-time">- ms</div>
+                    </div>
+                    <div class="metric-item">
+                        <h4>Nodes Explored</h4>
+                        <div id="nodes-explored">-</div>
+                    </div>
+                    <div class="metric-item">
+                        <h4>Algorithm Steps</h4>
+                        <div id="algorithm-steps">-</div>
+                    </div>
+                    <div class="metric-item">
+                        <h4>Memory Usage</h4>
+                        <div id="memory-usage">- KB</div>
+                    </div>
+                </div>
+
+                <!-- Route Information -->
+                <div class="route-info" id="bigdata-route-info" style="margin-top: 20px;">
+                    <h4><i class="fas fa-info-circle"></i> Route Analysis</h4>
+                    <div id="route-details">Select cities and find a route to see analysis</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <section style="margin-top: 30px;">
+            <h2><i class="fas fa-chart-line"></i> Algorithm Performance Analysis</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="chart-container">
+                    <canvas id="performance-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="complexity-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benchmark Results -->
+        <section id="benchmark-results" style="display: none; margin-top: 30px;">
+            <h2><i class="fas fa-trophy"></i> Benchmark Results</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="avg-execution-time">-</div>
+                    <div class="stat-label">Average Execution Time (ms)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="fastest-route">-</div>
+                    <div class="stat-label">Fastest Route Found (ms)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="complexity-factor">-</div>
+                    <div class="stat-label">Time Complexity Factor</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="efficiency-score">-</div>
+                    <div class="stat-label">Algorithm Efficiency Score</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="./bigdata.js"></script>
+</body>
+</html>
